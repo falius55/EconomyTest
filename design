@@ -1,0 +1,15 @@
+// 経済主体
+AbstractSubject {
+	}
+// 民間
+AbstractPrivate extends AbstractSubject {
+	}
+Company extends AbstractPrivate {
+	}
+Interface Bank {
+	}
+PrivateBank extends AbstractPrivate implement Bank {
+	}
+// 行政
+AbstractAdministration {
+	}
