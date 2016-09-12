@@ -1,15 +1,121 @@
 // 経済主体
 AbstractSubject {
+	Account account; // 会計
+	}
+// 公共
+AbstractPublic extends AbstractSubject {
 	}
 // 民間
 AbstractPrivate extends AbstractSubject {
+	Bank mainBank; // 主に利用する銀行
+	LocalGovernment local; // 所在地
+	borrow(int mount); // 借りる
 	}
-Company extends AbstractPrivate {
+// 組織
+Interface Organization {
+	employ(Parson); // 雇用する
+	fire(Parson); // 解雇する
 	}
+// 消費主体
+Interface Consumer {
+	buy(String name); // 購入
+	findProducer(Product); // 材やサービスを提供している店を探す
+	}
+// 一般人
+Parson extends AbstractPrivate implement Consumer {
+	enum WorkType; // アルバイト,非正規,正社員
+	enum SexType {MALE, FEMALE}; // 性別
+	int age; // 年齢
+	int happiness; // 生活満足度
+	Organization workplace; // 勤務先
+	School school; // 通学先
+	WorkType workType; // 勤務形態
+	SexType sex; // 性別
+	payTax(); // 納税する
+	payInsurance(); // 保険料を納付する
+	propose(Parson); // 結婚を申し込む
+	}
+// 民間企業
+Company extends AbstractPrivate implement Consumer, Organization {
+	}
+// 銀行インターフェイス
 Interface Bank {
+	finance(int mount); // 融資
+	satisfaction(int mount); // 返済を受ける
 	}
-PrivateBank extends AbstractPrivate implement Bank {
+// 民間銀行
+PrivateBank extends AbstractPrivate implement Bank, Organization {
+	static int loan; // 貸付金総額
+	}
+// 政策金融公庫
+PublicBank extends AbstractPublic implement Bank, Organization {
+	static int loan; // 貸付金総額
 	}
 // 行政
-AbstractAdministration {
+AbstractAdministration extends AbstractPublic implement Consumer, Organization {
+	Bank designatedFinancial; // 指定金融機関
+	flotationBond(); // 公債発行
+	List<Parson> people; // 国民、市民
+	collectTaxes(); // 徴税
+	}
+// 税金計算(社会保険含む)
+Tax {
+	}
+// 中央政府
+NationalGovernment extends AbstractAdministration, Organization {
+	}
+// 地方政府
+LocalGovernment extends AbstractAdministration, Organization {
+	}
+// 中央銀行
+CenterBank extends AbstractPublic implement Bank, Organization {
+	static int loan; // 貸付金総額
+	}
+Interface School {
+	acceptStudent(Parson); // 生徒受け入れ
+	}
+PublicSchool extends AbstractPublic implement Organization, School {
+	}
+PrivateSchool extends AbstractPrivate implement Organization, School {
+	}
+
+// 会計(１年毎に新規作成)
+Interface Account<T> {
+	Account<T> merge(Account<T>); // ２つの会計を合わせ、新しい会計を返す。結婚、合併
+	}
+AbstractAccount<T extends Enum<T> & AbstractAccount.iItem> implement Account {
+	Interface iItem {}
+	enum Type { ASSETS,COST,PROFIT; } // 会計種別(費用、収益、資産、負債)
+	Map<Type, Map<T, Integer> accountsBook; // 帳簿(EnumMap)
+	Map<AbstractAdministration, Integer> bondMap; // 公債の発行先から、保有公債総額へのマップ
+	add(T,int);
+	}
+// 民間会計
+PrivateAccount extends AbstractAccount {
+	}
+// 民間企業会計
+PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccount.Item> {
+	// 会計細目
+	enum Item implement iItem {
+		CASH(Type.ASSETS),
+		SALES(Type.PROFIT);
+		Item(Type type) {
+				itemBook.put(type,0);
+			}
+		}
+	}
+// 公共会計
+PublicAccount<T> extends AbstractAccount<T> {
+	}
+// 一般会計
+GeneralAccount extends PublicAccount {
+	}
+// 特別会計
+SpecialAccount extends PublicAccount {
+	}
+ParsonAccount extends AbstractAccount<ParsonAccount.Item> {
+	// 会計細目
+	enum Item {
+		CASH(Type.ASSETS),
+		}
 	}
