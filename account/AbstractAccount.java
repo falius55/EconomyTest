@@ -15,7 +15,9 @@ import economy.account.Account;
  * @param T 勘定科目一覧を定義した列挙型。AbstractAccount.iItemインターフェースを実装していなければならない
  */
 public abstract class AbstractAccount<T extends Enum<T> & AbstractAccount.iItem> implements Account<T> {
-	// 科目の細目を定義するenumの型を定義する
+	/**
+	 * 勘定科目を定義する列挙型に実装するインターフェース
+	 */
 	public interface iItem {
 		Type type();
 	}
@@ -23,8 +25,12 @@ public abstract class AbstractAccount<T extends Enum<T> & AbstractAccount.iItem>
 	/**
 	 * 科目種別(費用、収益、資産、負債、資本)
 	 */
-	enum Type {
-		EXPENSE(RL.LEFT),REVENUE(RL.RIGHT),ASSETS(RL.LEFT),LIABILITIES(RL.RIGHT),EQUITY(RL.RIGHT);
+	public enum Type {
+		/** 費用 */ EXPENSE(RL.LEFT),
+		/** 収益 */ REVENUE(RL.RIGHT),
+		/** 資産 */ ASSETS(RL.LEFT),
+		/** 負債 */ LIABILITIES(RL.RIGHT),
+		/** 資本 */ EQUITY(RL.RIGHT);
 		private final RL rl; // 貸借対照表、損益計算書で左右どちらに表記されるか(借方科目か貸方科目か)
 		Type(RL rl) {
 			this.rl = rl;
@@ -90,6 +96,7 @@ public abstract class AbstractAccount<T extends Enum<T> & AbstractAccount.iItem>
 	}
 	/**
 	 * 指定がないときに増減させる標準資産科目を返す。通常は現金を想定するが、サブタイプごとに定義する
+	 * @return 標準資産科目
 	 */
 	abstract public T defaultItem();
 	/**
@@ -283,6 +290,7 @@ public abstract class AbstractAccount<T extends Enum<T> & AbstractAccount.iItem>
 		}
 		/**
 		 * 計上する
+		 * @param date 計上日
 		 * @return 計上月額
 		 */
 		public int record(LocalDate date) {
