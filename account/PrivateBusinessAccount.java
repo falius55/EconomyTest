@@ -1,5 +1,9 @@
+package economy.account;
+
 import java.util.Map;
 import java.util.EnumMap;
+
+import economy.account.AbstractAccount;
 
 public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccount.Item> {
 	// 会計細目

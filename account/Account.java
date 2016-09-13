@@ -1,4 +1,9 @@
-// T: 科目を表すenum
+package economy.account;
+
+/**
+ * 会計帳簿を表すインターフェース
+ * @param T 科目一覧の列挙型
+ */
 public interface Account<T extends Enum<T>> {
 
 	// ２つの会計を合わせ、新しい会計を返す。結婚、合併
