@@ -100,7 +100,6 @@ PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccount.Item> {
 		CASH(Type.ASSETS),
 		SALES(Type.PROFIT);
 		Item(Type type) {
-				itemBook.put(type,0);
 			}
 		}
 	}
