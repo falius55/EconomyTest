@@ -7,7 +7,8 @@ import java.util.EnumSet;
 import java.time.LocalDate;
 
 import economy.account.AbstractAccount;
-import economy.Product;
+import economy.enumpack.Product;
+import economy.enumpack.Industry;
 
 public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccount.Item> {
 	// 会計細目
@@ -53,7 +54,7 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	}
 
 	private Set<Product> products; // 取扱商品の集合
-	private Set<Product> materials; // 使用する原材料の集合
+	private Set<Product> materials; // 使用する原材料の集合(購入するときに仕入になるのかどうかを判断する)
 
 	private PrivateBusinessAccount(Set<Product> products, Set<Product> materials) {
 		super(Item.class);
@@ -70,7 +71,7 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	public static PrivateBusinessAccount newInstance(Set<Product> products) {
 		Set<Product> materials = EnumSet.noneOf(Product.class);
 		for (Product pd : products) {
-			materials.addAll(pd.materials());
+			materials.addAll(pd.materialSet());
 		}
 		return newInstance(products, materials);
 	}
@@ -94,7 +95,7 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 
 	@Override
 	public PrivateBusinessAccount newInstance() {
-		return new PrivateBusinessAccount();
+		return new PrivateBusinessAccount(products, materials);
 	}
 
 	/**
@@ -126,9 +127,9 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	public PrivateBusinessAccount buy(LocalDate date, Product product) {
 		if (materials.contains(product)) return stock(product, 1);
 		switch (product.type()) {
-			case Product.Type.FIXED_ASSET:
+			case FIXED_ASSET:
 				return buyFixedAsset(date, product);
-			case Product.Type.LAND:
+			case LAND:
 				return buyLand(date, product);
 		}
 		return this;
@@ -148,8 +149,8 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	 * 固定資産の購入
 	 */
 	private PrivateBusinessAccount buyFixedAsset(LocalDate date, Product asset) {
-		if (asset.type() != Product.FIXED_ASSET) throw new IllegalArgumentException();
-		addFixedAsset(data,asset.price(), asset.serviceLife());
+		if (asset.type() != Product.Type.FIXED_ASSET) throw new IllegalArgumentException();
+		addFixedAsset(date,asset.price(), asset.serviceLife());
 
 		addLeft(Item.TANGIBLE_ASSETS,asset.price());
 		addRight(Item.CHECKING_ACCOUNTS,asset.price());
@@ -176,7 +177,7 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	/**
 	 * 土地の購入
 	 */
-	private PrivateBusinessAccount buyLand(LocalDate date, Prodacut asset) {
+	private PrivateBusinessAccount buyLand(LocalDate date, Product asset) {
 		addLeft(Item.TANGIBLE_ASSETS, asset.price());
 		addRight(Item.CHECKING_ACCOUNTS, asset.price());
 		return this;
@@ -192,10 +193,11 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	}
 
 	public static void main(String[] args) {
-		Account<PrivateBusinessAccount.Item> account = new PrivateBusinessAccount();
+		Account<PrivateBusinessAccount.Item> account = PrivateBusinessAccount.newInstance(Industry.FARMER);
 		account.add(PrivateBusinessAccount.Item.SALES, 2000);
 		System.out.println(account);
 		PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
 		castAccount.test_fixedAssets();
+		Product.printAll();
 	}
 }
