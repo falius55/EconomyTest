@@ -196,8 +196,8 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 		Account<PrivateBusinessAccount.Item> account = PrivateBusinessAccount.newInstance(Industry.FARMER);
 		account.add(PrivateBusinessAccount.Item.SALES, 2000);
 		System.out.println(account);
-		PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
-		castAccount.test_fixedAssets();
+		// PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
+		// castAccount.test_fixedAssets();
 		Product.printAll();
 	}
 }

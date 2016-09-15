@@ -53,4 +53,8 @@ public enum Industry {
 	public boolean hasProduct(Product product) {
 		return products().contains(product);
 	}
+	public void print() {
+		System.out.printf("%s%n", this);
+		System.out.printf("取扱商品:%s%n", products());
+	}
 }

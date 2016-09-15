@@ -8,6 +8,7 @@ import java.util.EnumMap;
 
 import economy.enumpack.Industry;
 import economy.util.EnumEachable;
+import economy.util.TableBuilder;
 
 /**
  * 製品
@@ -170,9 +171,20 @@ public enum Product {
 		System.out.println("");
 	}
 	public static void printAll() {
-		for (Product pd : values()) {
-			pd.print();
-		}
+		// for (Product pd : values()) {
+		// 	pd.print();
+		// }
+
+		TableBuilder tb = new TableBuilder("商品名","値段","単位あたり数量","種別","耐用年数","原材料","取扱業者");
+		for (Product pd : values())
+			tb.insert(pd)
+				.add("値段", pd.price())
+				.add("単位あたり数量", pd.numOfLot())
+				.add("種別", null)
+				.add("耐用年数", pd.serviceLife())
+				.add("原材料", pd.materials())
+				.add("取扱業者", pd.industries());
+		tb.print();
 	}
 
 	/**
