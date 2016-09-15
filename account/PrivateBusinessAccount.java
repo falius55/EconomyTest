@@ -9,55 +9,15 @@ import java.time.LocalDate;
 import economy.account.AbstractAccount;
 import economy.enumpack.Product;
 import economy.enumpack.Industry;
+import economy.enumpack.PrivateBusinessAccountTitle;
 
-public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccount.Item> {
-	// 会計細目
-	public enum Item implements AbstractAccount.iItem {
-		/** 雑費(費用) */ MISCELLANEOUS_EXPENSE(Type.EXPENSE), // 雑費
-		/** 減価償却費(費用) */ DEPRECIATION(Type.EXPENSE),
-		/** 仕入費用(費用) */ PURCHESES(Type.EXPENSE), 
-		/** 支払家賃(費用) */ RENT_EXPENSE(Type.EXPENSE), 
-		/**  給料費用(費用) */ SALARIES_EXPENSE(Type.EXPENSE),
-		/** 消耗品費(資産) */ SUPPLIES_EXPENSE(Type.EXPENSE),
-
-		/** 売上高(収益) */ SALES(Type.REVENUE),
-		/** 未収収益(収益) */ ACCRUED_REVENUE(Type.REVENUE),
-
-		/** 現金(資産) */ CASH(Type.ASSETS),
-		/** 売掛金(資産) */ RECEIVABLE(Type.ASSETS),
-		/** 減価償却累計額(資産) 貸方にaddする */ ACCUMULATED_DEPRECIATION(Type.ASSETS),
-		/** 土地(資産) */ LAND(Type.ASSETS),
-		/** 貸付金(資産) */ LOANS_RECEIVABLE(Type.ASSETS),
-		/** 商品(資産) */ MERCHANDISE(Type.ASSETS),
-		/** 前払費用(資産) */ PREEPAID_EXPENSE(Type.ASSETS),
-		/** 有形固定資産(資産) */ TANGIBLE_ASSETS(Type.ASSETS),
-		/** 当座預金(資産) */ CHECKING_ACCOUNTS(Type.ASSETS),
-		/** 建物(資産) */ BUILDINGS(Type.ASSETS),
-
-		/** 買掛金(負債) */ PAYABLE(Type.LIABILITIES),
-		/** 未払費用(負債) */ ACCRUED_EXPENSE(Type.LIABILITIES),
-		/** 借入金(負債) */ LOANS_PAYABLE(Type.LIABILITIES),
-
-		/** 資本金(資本) */ CAPITAL_STOCK(Type.EQUITY);
-
-		private final Type type;
-		private static final Item defaultItem = CHECKING_ACCOUNTS;
-		Item(Type type) {
-			this.type = type;
-		}
-		public Type type() {
-			return this.type;
-		}
-		public static Item defaultItem() {
-			return defaultItem;
-		}
-	}
+public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBusinessAccountTitle> {
 
 	private Set<Product> products; // 取扱商品の集合
 	private Set<Product> materials; // 使用する原材料の集合(購入するときに仕入になるのかどうかを判断する)
 
 	private PrivateBusinessAccount(Set<Product> products, Set<Product> materials) {
-		super(Item.class);
+		super(PrivateBusinessAccountTitle.class);
 		this.products = products;
 		this.materials = materials;
 	}
@@ -80,42 +40,37 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	}
 
 	@Override
-	public PrivateBusinessAccount merge(Account<Item> account) {
+	public PrivateBusinessAccount merge(Account<PrivateBusinessAccountTitle> account) {
 		if (!(account instanceof PrivateBusinessAccount)) throw new IllegalArgumentException();
 		return (PrivateBusinessAccount)super.merge(account);
 	}
 	@Override
-	public Item defaultItem() {
-		return Item.defaultItem();
+	public PrivateBusinessAccountTitle defaultItem() {
+		return PrivateBusinessAccountTitle.defaultItem();
 	}
 	@Override
-	public Item[] items() {
-		return Item.values();
-	}
-
-	@Override
-	public PrivateBusinessAccount newInstance() {
-		return new PrivateBusinessAccount(products, materials);
+	public PrivateBusinessAccountTitle[] items() {
+		return PrivateBusinessAccountTitle.values();
 	}
 
 	/**
 	 * 売り上げる。売上金は当座預金への振込で受け取り
 	 */
 	public PrivateBusinessAccount saleToAccount(int mount) {
-		addLeft(Item.CHECKING_ACCOUNTS, mount);
-		addRight(Item.SALES, mount);
+		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, mount);
+		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}
 	// 現金受け取り
 	public PrivateBusinessAccount saleByCash(int mount) {
-		addLeft(Item.CASH, mount);
-		addRight(Item.SALES, mount);
+		addLeft(PrivateBusinessAccountTitle.CASH, mount);
+		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}
 	// 売掛金
 	public PrivateBusinessAccount saleByReceivable(int mount) {
-		addLeft(Item.RECEIVABLE, mount);
-		addRight(Item.SALES, mount);
+		addLeft(PrivateBusinessAccountTitle.RECEIVABLE, mount);
+		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}
 
@@ -141,8 +96,8 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	 */
 	public PrivateBusinessAccount stock(Product product, int units) {
 		int amount = product.price() * units;
-		addLeft(Item.PURCHESES, amount);
-		addRight(Item.PAYABLE, amount);
+		addLeft(PrivateBusinessAccountTitle.PURCHESES, amount);
+		addRight(PrivateBusinessAccountTitle.PAYABLE, amount);
 		return this;
 	}
 	/**
@@ -152,8 +107,8 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 		if (asset.type() != Product.Type.FIXED_ASSET) throw new IllegalArgumentException();
 		addFixedAsset(date,asset.price(), asset.serviceLife());
 
-		addLeft(Item.TANGIBLE_ASSETS,asset.price());
-		addRight(Item.CHECKING_ACCOUNTS,asset.price());
+		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS,asset.price());
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS,asset.price());
 		return this;
 	}
 	/**
@@ -161,8 +116,8 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	 */
 	private PrivateBusinessAccount depreciationByIndirect(LocalDate date) {
 		int amount = recordFixedAssets(date);
-		addLeft(Item.DEPRECIATION,amount);
-		addRight(Item.ACCUMULATED_DEPRECIATION, amount);
+		addLeft(PrivateBusinessAccountTitle.DEPRECIATION,amount);
+		addRight(PrivateBusinessAccountTitle.ACCUMULATED_DEPRECIATION, amount);
 		return this;
 	}
 	/**
@@ -170,16 +125,16 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	 */
 	private PrivateBusinessAccount depreciationByDirect(LocalDate date) {
 		int amount = recordFixedAssets(date);
-		addLeft(Item.DEPRECIATION, amount);
-		addRight(Item.TANGIBLE_ASSETS, amount);
+		addLeft(PrivateBusinessAccountTitle.DEPRECIATION, amount);
+		addRight(PrivateBusinessAccountTitle.TANGIBLE_ASSETS, amount);
 		return this;
 	}
 	/**
 	 * 土地の購入
 	 */
 	private PrivateBusinessAccount buyLand(LocalDate date, Product asset) {
-		addLeft(Item.TANGIBLE_ASSETS, asset.price());
-		addRight(Item.CHECKING_ACCOUNTS, asset.price());
+		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS, asset.price());
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, asset.price());
 		return this;
 	}
 
@@ -187,17 +142,17 @@ public class PrivateBusinessAccount extends AbstractAccount<PrivateBusinessAccou
 	 * 借金する
 	 */
 	private PrivateBusinessAccount borrow(int amount) {
-		addLeft(Item.CHECKING_ACCOUNTS, amount);
-		addRight(Item.LOANS_PAYABLE, amount);
+		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		addRight(PrivateBusinessAccountTitle.LOANS_PAYABLE, amount);
 		return this;
 	}
 
 	public static void main(String[] args) {
-		Account<PrivateBusinessAccount.Item> account = PrivateBusinessAccount.newInstance(Industry.FARMER);
-		account.add(PrivateBusinessAccount.Item.SALES, 2000);
+		Account<PrivateBusinessAccountTitle> account = PrivateBusinessAccount.newInstance(Industry.FARMER);
+		account.add(PrivateBusinessAccountTitle.SALES, 2000);
 		System.out.println(account);
-		// PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
-		// castAccount.test_fixedAssets();
+		PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
+		castAccount.test_fixedAssets();
 		Product.printAll();
 	}
 }
