@@ -13,30 +13,12 @@ import economy.enumpack.PrivateBusinessAccountTitle;
 
 public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBusinessAccountTitle> {
 
-	private Set<Product> products; // 取扱商品の集合
-	private Set<Product> materials; // 使用する原材料の集合(購入するときに仕入になるのかどうかを判断する)
-
-	private PrivateBusinessAccount(Set<Product> products, Set<Product> materials) {
+	private PrivateBusinessAccount() {
 		super(PrivateBusinessAccountTitle.class);
-		this.products = products;
-		this.materials = materials;
 	}
-	/**
-	 * @param products 取扱商品の集合
-	 * @param materials 利用する原材料の種類
-	 */
-	public static PrivateBusinessAccount newInstance(Set<Product> products, Set<Product> materials) {
-		return new PrivateBusinessAccount(products, materials);
-	}
-	public static PrivateBusinessAccount newInstance(Set<Product> products) {
-		Set<Product> materials = EnumSet.noneOf(Product.class);
-		for (Product pd : products) {
-			materials.addAll(pd.materialSet());
-		}
-		return newInstance(products, materials);
-	}
-	public static PrivateBusinessAccount newInstance(Industry industry) {
-		return newInstance(industry.products());
+
+	public static PrivateBusinessAccount newInstance() {
+		return new PrivateBusinessAccount();
 	}
 
 	@Override
@@ -52,6 +34,10 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	public PrivateBusinessAccountTitle[] items() {
 		return PrivateBusinessAccountTitle.values();
 	}
+
+	/*
+	 * 以下、ほぼ仕分け処理が続く
+	 */
 
 	/**
 	 * 売り上げる。売上金は当座預金への振込で受け取り
@@ -73,46 +59,30 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}
-
-	/**
-	 * 購入処理を行う
-	 * @param date 購入日
-	 * @param product 購入品
-	 */
-	public PrivateBusinessAccount buy(LocalDate date, Product product) {
-		if (materials.contains(product)) return stock(product, 1);
-		switch (product.type()) {
-			case FIXED_ASSET:
-				return buyFixedAsset(date, product);
-			case LAND:
-				return buyLand(date, product);
-		}
-		return this;
-	}
 	/**
 	 * 仕入れる(買掛金)
-	 * @param product 仕入対象の製品
-	 * @param units 単位数
 	 */
-	public PrivateBusinessAccount stock(Product product, int units) {
-		int amount = product.price() * units;
+	public PrivateBusinessAccount stock(int amount) {
 		addLeft(PrivateBusinessAccountTitle.PURCHESES, amount);
 		addRight(PrivateBusinessAccountTitle.PAYABLE, amount);
 		return this;
 	}
 	/**
 	 * 固定資産の購入
+	 * @param date 購入日
+	 * @param amount 金額
+	 * @param serviceLife 耐用年数
 	 */
-	private PrivateBusinessAccount buyFixedAsset(LocalDate date, Product asset) {
-		if (asset.type() != Product.Type.FIXED_ASSET) throw new IllegalArgumentException();
-		addFixedAsset(date,asset.price(), asset.serviceLife());
+	private PrivateBusinessAccount buyFixedAsset(LocalDate date, int amount, int serviceLife) {
+		addFixedAsset(date,amount, serviceLife);
 
-		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS,asset.price());
-		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS,asset.price());
+		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS,amount);
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS,amount);
 		return this;
 	}
 	/**
 	 * 間接法で減価償却する
+	 * @param date 減価償却日。この日が減価償却日である固定資産が減価償却される
 	 */
 	private PrivateBusinessAccount depreciationByIndirect(LocalDate date) {
 		int amount = recordFixedAssets(date);
@@ -132,27 +102,55 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	/**
 	 * 土地の購入
 	 */
-	private PrivateBusinessAccount buyLand(LocalDate date, Product asset) {
-		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS, asset.price());
-		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, asset.price());
+	private PrivateBusinessAccount buyLand(int amount) {
+		addLeft(PrivateBusinessAccountTitle.TANGIBLE_ASSETS, amount);
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
 		return this;
 	}
 
 	/**
-	 * 借金する
+	 * 借金処理
 	 */
-	private PrivateBusinessAccount borrow(int amount) {
+	@Override
+	public PrivateBusinessAccount borrow(int amount) {
 		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
 		addRight(PrivateBusinessAccountTitle.LOANS_PAYABLE, amount);
 		return this;
 	}
+	/**
+	 * 返済処理を行う
+	 */
+	@Override
+	public PrivateBusinessAccount repay(int amount) {
+		addLeft(PrivateBusinessAccountTitle.LOANS_PAYABLE, amount);
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		return this;
+	}
+
+	/**
+	 * 貸金処理を行う
+	 */
+	@Override
+	public PrivateBusinessAccount lend(int amount) {
+		addLeft(PrivateBusinessAccountTitle.LOANS_RECEIVABLE, amount);
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		return this;
+	}
+	/**
+	 * 返済を受けた時の処理を行う
+	 */
+	@Override
+	public PrivateBusinessAccount repaid(int amount) {
+		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		addRight(PrivateBusinessAccountTitle.LOANS_RECEIVABLE, amount);
+		return this;
+	}
 
 	public static void main(String[] args) {
-		Account<PrivateBusinessAccountTitle> account = PrivateBusinessAccount.newInstance(Industry.FARMER);
+		PrivateBusinessAccount account = PrivateBusinessAccount.newInstance();
 		account.add(PrivateBusinessAccountTitle.SALES, 2000);
 		System.out.println(account);
-		PrivateBusinessAccount castAccount = (PrivateBusinessAccount)account;
-		castAccount.test_fixedAssets();
+		account.test_fixedAssets();
 		Product.printAll();
 	}
 }

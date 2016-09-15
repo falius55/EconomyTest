@@ -15,16 +15,17 @@ import economy.enumpack.AccountType;
 
 /**
  * 複式簿記会計の骨格実装クラス
- * 帳簿の操作と固定資産の処理を主に担当
+ * 借方貸方への記帳
+ * 集計
+ * 減価償却
  */
 public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitle> extends AbstractAccount<T> implements DoubleEntryAccount<T> {
 	private final Map<AccountType, Map<T, Integer>> accountsBook; // 帳簿(EnumMap) 科目種別のマップ
-	private final Set<FixedAsset> fixedAssets;
+	private final Set<FixedAsset> fixedAssets; // TODO:建物は科目が別なので、別に保持する
 
 	protected AbstractDoubleEntryAccount(Class<T> clazz) {
 		this.accountsBook = initBook(clazz);
 		fixedAssets = new HashSet<FixedAsset>();
-		// bondMap = new WeakHashMap<AbstractAdministration, Integer>();
 	}
 
 	// 帳簿を初期化する
@@ -59,7 +60,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param amount 金額
 	 * @throws IllegalArgumentException サブタイプで定義した標準科目が資産科目でない場合
 	 */
-	public void add(T item, int amount) {
+	protected void add(T item, int amount) {
 		T defaultItem = defaultItem();
 		if (!defaultItem.type().equals(AccountType.ASSETS)) throw new IllegalArgumentException("defaultItem is not Assets");
 		add(item.type().rl(), item, amount);
@@ -94,38 +95,6 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	}
 
 	/**
-	 * 資産合計
-	 */
-	@Override
-	public int assets() {
-		return get(AccountType.ASSETS);
-	}
-
-	/**
-	 * 費用合計
-	 */
-	@Override
-	public int expense() {
-		return get(AccountType.EXPENSE);
-	}
-
-	/**
-	 * 収益合計
-	 */
-	@Override
-	public int revenue() {
-		return get(AccountType.REVENUE);
-	}
-
-	/**
-	 * 負債合計
-	 */
-	@Override
-	public int liabilities() {
-		return get(AccountType.LIABILITIES);
-	}
-
-	/**
 	 * 指定した科目種別の総額を計算する
 	 * @param type 科目種別
 	 * @return 集計結果
@@ -135,8 +104,8 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		Map<T, Integer> itemMap = accountsBook.get(type);
 		int result = 0;
 
-		for (Map.Entry<T, Integer> entry : itemMap.entrySet()) {
-			result += entry.getValue().intValue();
+		for (Integer amount : itemMap.values()) {
+			result += amount.intValue();
 		}
 		return result;
 	}
@@ -186,9 +155,10 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 
 
 	/**
-	 * 固定資産を表すクラス
+	 * 固定資産の減価償却の計算を行うクラス
+	 * 土地は減価償却しないので土地以外
 	 */
-	public static class FixedAsset {
+	private static class FixedAsset {
 		private static final int RESIDUAL_PERCENT = 10; // 取得原価に対する残存価額の割合(%)
 		private final LocalDate dateOfAcquisition; // 取得日
 		private final int acquisitionCost; // 取得原価
@@ -213,7 +183,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			this.fixedAmountOfMonths = (int)Math.ceil((double)(acquisitionCost - residualValue) / (serviceLife * 12));
 			this.undepreciatedBalance = acquisitionCost - residualValue;
 
-			this.recordMap = new TreeMap<LocalDate, Integer>(); // 償却日でソート
+			this.recordMap = new TreeMap<LocalDate, Integer>(); // 償却日でソートされる
 		}
 		/**
 		 * その日が計上日であるか(毎月。営業日無視) TODO: 営業日を考慮する
@@ -232,7 +202,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		 * @param date 計上日
 		 * @return 計上月額
 		 */
-		public int record(LocalDate date) {
+		private int record(LocalDate date) {
 			if (!isRecordedDate(date)) return 0;
 			if (recordMap.containsKey(date)) return 0;
 			if (undepreciatedBalance <= 0) return 0;
@@ -245,13 +215,15 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		/**
 		 * 状態を表形式で表示する
 		 */
-		public void print() {
+		private void print() {
 			System.out.printf("get:%s, all-amount:%d円, per-amount:%d, life:%d年%n", dateOfAcquisition, acquisitionCost, fixedAmountOfMonths, serviceLife);
-			System.out.printf("日付 	金額%n");
+			economy.util.TableBuilder tb = new economy.util.TableBuilder("償却回", "日付", "金額");
 			int cnt = 1;
-			for (LocalDate date : recordMap.keySet()) {
-				System.out.printf("%d回目 %s %s%n", cnt++, date, recordMap.get(date));
-			}
+			for (LocalDate date : recordMap.keySet())
+				tb.insert(cnt++)
+					.add(1, date)
+					.add(2, recordMap.get(date));
+			tb.print();
 			System.out.printf("最終償却日の合致:%b%n", ((SortedMap<LocalDate, Integer>)recordMap).lastKey().equals(lastRecordedDate));
 		}
 	}

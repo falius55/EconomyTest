@@ -13,7 +13,7 @@ import economy.enumpack.AccountType;
 import economy.enumpack.AccountTitle;
 
 /**
- * 帳簿を表すすべてのクラスの基底クラス
+ * 会計を表すすべてのクラスの基底クラス
  * @param T 勘定科目一覧を定義した列挙型。AccountTitleインターフェースを実装していなければならない
  */
 public abstract class AbstractAccount<T extends Enum<T> & AccountTitle> implements Account<T> {
