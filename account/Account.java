@@ -25,6 +25,15 @@ public interface Account<T extends Enum<T> & AccountTitle> {
 	T defaultItem();
 
 	/**
+	 * お金を銀行に預けた時の処理を行う
+	 */
+	Account<T> saveMoney(int amount);
+
+	/**
+	 * お金をおろした時の処理を行う
+	 */
+	Account<T> downMoney(int amount);
+	/**
 	 * 借金処理を行う
 	 */
 	Account<T> borrow(int amount);
@@ -40,6 +49,13 @@ public interface Account<T extends Enum<T> & AccountTitle> {
 	 * 返済を受けた時の処理を行う
 	 */
 	Account<T> repaid(int amount);
+
+	/**
+	 * 納税処理を行います
+	 * 公的機関ではサポートされません
+	 * @throws UnssuportedOperationException 公的機関の会計で実行された場合
+	 */
+	Account<T> payTax(int amount);
 
 	/**
 	 * 指定した科目種別の総額を集計する

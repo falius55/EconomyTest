@@ -110,7 +110,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		return result;
 	}
 	/**
-	 * 指定した勘定科目の金額を返す
+	 * 指定した勘定科目の金額を返します
 	 * @param item 勘定科目
 	 * @return 指定した勘定科目の金額
 	 */
@@ -121,7 +121,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	}
 
 	/**
-	 * 帳簿内容の文字列表現を返す
+	 * 帳簿内容の文字列表現を返します
 	 */
 	@Override
 	public String toString() {
@@ -132,7 +132,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	// 以下は固定資産
 
 	/**
-	 * 固定資産を追加する
+	 * 固定資産を追加します
 	 * @param dateOfAcquisition 取得日
 	 * @param acquisitionCost 取得原価
 	 * @param serviceLife 耐用年数
@@ -141,15 +141,25 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		fixedAssets.add(new FixedAsset(dateOfAcquisition, acquisitionCost, serviceLife));
 	}
 	/**
-	 * 所有している固定資産全てにおいて、減価償却の処理を行う
+	 * 所有している固定資産全てにおいて、減価償却の処理を行います
+	 * より具体的には、dateが償却日である固定資産のみ減価償却し、その償却費の総額を返します。
+	 * ただし、帳簿への記帳処理は行いません
 	 * @param date 記入日
 	 * @return その日の償却額
 	 */
 	protected int recordFixedAssets(LocalDate date) {
 		int amount = 0;
-		for (FixedAsset asset : fixedAssets) {
+		for (FixedAsset asset : fixedAssets)
 			amount += asset.record(date);
-		}
+		return amount;
+	}
+	/**
+	 * 保有している固定資産の現在価値の総額を計算します
+	 */
+	protected int fixedAssetsValue() {
+		int amount = 0;
+		for (FixedAsset asset : fixedAssets)
+			amount += asset.presentValue();
 		return amount;
 	}
 
@@ -186,6 +196,12 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			this.recordMap = new TreeMap<LocalDate, Integer>(); // 償却日でソートされる
 		}
 		/**
+		 * この固定資産の現在の価値を返します
+		 */
+		private int presentValue() {
+			return residualValue + undepreciatedBalance;
+		}
+		/**
 		 * その日が計上日であるか(毎月。営業日無視) TODO: 営業日を考慮する
 		 */
 		private boolean isRecordedDate(LocalDate date) {
@@ -198,7 +214,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			return date.getDayOfMonth() == dateOfAcquisition.getDayOfMonth();
 		}
 		/**
-		 * 計上する
+		 * 減価償却を計上します。引数で渡された日付が計上日でない場合、あるいは未償却残高がすでにない場合は何もせず０を返します
 		 * @param date 計上日
 		 * @return 計上月額
 		 */
@@ -213,7 +229,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			return amount;
 		}
 		/**
-		 * 状態を表形式で表示する
+		 * 状態を表形式で表示します
 		 */
 		private void print() {
 			System.out.printf("get:%s, all-amount:%d円, per-amount:%d, life:%d年%n", dateOfAcquisition, acquisitionCost, fixedAmountOfMonths, serviceLife);

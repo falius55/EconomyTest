@@ -17,7 +17,7 @@ public enum PrivateBusinessAccountTitle implements AccountTitle {
 	/** 売上高(収益) */ SALES(AccountType.REVENUE),
 	/** 未収収益(収益) */ ACCRUED_REVENUE(AccountType.REVENUE),
 
-	/** 現金(資産) */ CASH(AccountType.ASSETS),
+	/** 小口現金(資産) */ CASH(AccountType.ASSETS),
 	/** 売掛金(資産) */ RECEIVABLE(AccountType.ASSETS),
 	/** 減価償却累計額(資産) 貸方にaddする */ ACCUMULATED_DEPRECIATION(AccountType.ASSETS),
 	/** 土地(資産) */ LAND(AccountType.ASSETS),

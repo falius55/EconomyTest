@@ -109,6 +109,24 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	}
 
 	/**
+	 * お金を銀行に預けた時の処理を行う
+	 */
+	@Override
+	public PrivateBusinessAccount saveMoney(int amount) {
+		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		addRight(PrivateBusinessAccountTitle.CASH, amount);
+		return this;
+	}
+	/**
+	 * お金を下ろした時の処理を行う
+	 */
+	@Override
+	public PrivateBusinessAccount downMoney(int amount) {
+		addLeft(PrivateBusinessAccountTitle.CASH, amount);
+		addRight(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
+		return this;
+	}
+	/**
 	 * 借金処理
 	 */
 	@Override
@@ -143,6 +161,11 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	public PrivateBusinessAccount repaid(int amount) {
 		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, amount);
 		addRight(PrivateBusinessAccountTitle.LOANS_RECEIVABLE, amount);
+		return this;
+	}
+
+	@Override
+	public PrivateBusinessAccount payTax(int amount) {
 		return this;
 	}
 
