@@ -6,6 +6,7 @@ import java.util.HashSet;
 import economy.player.AbstractSubject;
 import economy.player.Organization;
 import economy.player.Parson;
+import economy.account.PrivateBusinessAccount;
 
 /**
  * 組織インターフェースの骨格実装クラスです
@@ -16,6 +17,7 @@ public class AbstractOrganization extends AbstractSubject implements Organizatio
 	private Map<LocalDate, Set<Parson>> workingRecord; // 出勤記録
 
 	public AbstractOrganization() {
+		super(PrivateBusinessAccount.newInstance());
 		employer = new HashSet<Parson>();
 	}
 

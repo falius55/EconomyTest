@@ -15,5 +15,4 @@ public interface Private {
 	 */
 	void payTax(int amount);
 
-	
 }

@@ -6,12 +6,17 @@ import java.util.TreeMap;
 import java.util.SortedMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Arrays;
+import java.util.stream.Stream;
+import java.util.stream.Collectors;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import economy.account.AbstractAccount;
 import economy.account.DoubleEntryAccount;;
 import economy.enumpack.AccountTitle;
 import economy.enumpack.AccountType;
+import timer.Timer;
 
 /**
  * 複式簿記会計の骨格実装クラス
@@ -20,7 +25,7 @@ import economy.enumpack.AccountType;
  * 減価償却
  */
 public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitle> extends AbstractAccount<T> implements DoubleEntryAccount<T> {
-	private final Map<AccountType, Map<T, Integer>> accountsBook; // 帳簿(EnumMap) 科目種別のマップ
+	private final Map<AccountType, Map<T, Integer>> accountsBook; // 帳簿(EnumMap) 科目種別から、勘定科目からその金額へのマップ、へのマップ
 	private final Set<FixedAsset> fixedAssets; // TODO:建物は科目が別なので、別に保持する
 
 	protected AbstractDoubleEntryAccount(Class<T> clazz) {
@@ -30,16 +35,17 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 
 	// 帳簿を初期化する
 	private Map<AccountType, Map<T, Integer>> initBook(Class<T> clazz) {
-		Map<AccountType, Map<T, Integer>> result = new EnumMap<AccountType, Map<T, Integer>>(AccountType.class);
-		for (AccountType type : AccountType.values()) {
-			Map<T, Integer> map = new EnumMap<T, Integer>(clazz);
-			for (T item : clazz.getEnumConstants()) {
-				if (item.type().equals(type))
-					map.put(item, 0);
-			}
-			result.put(type, map);
-		}
-		return result;
+		// 0.13ミリ秒
+		return Arrays.stream(clazz.getEnumConstants())
+			.collect(Collectors.groupingBy( // 分類関数の戻り値をキーとしたマップに各要素を格納するが、同じ戻り値となった要素は第三引数でひとつのコレクション等に格納する
+						e -> e.type(), // 分類関数　戻り値をキーとしてマップに格納される
+						() -> new EnumMap<AccountType, Map<T, Integer>>(AccountType.class), // 中間生成物を作成する処理 要は、何に入れる 一番上のマップの形式
+						Collectors.toMap( // 分類したものをさらにひとつのマップにまとめる(リダクションする)ためのコレクター
+							e -> e, // キーを作るための関数
+							e -> 0, // 値を作るための関数
+							(t, u) -> t, // キーが同じ要素が出てきたらどうするか
+							() -> new EnumMap<T, Integer>(clazz)) // 中間生成物
+						));
 	}
 
 	/**
@@ -48,7 +54,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 */
-	protected void add(AccountType.RL rl, T item, int amount) {
+	protected final void add(AccountType.RL rl, T item, int amount) {
 		if (item.type().rl().equals(rl))
 			increase(item, amount);
 		else
@@ -60,7 +66,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param amount 金額
 	 * @throws IllegalArgumentException サブタイプで定義した標準科目が資産科目でない場合
 	 */
-	protected void add(T item, int amount) {
+	protected final void add(T item, int amount) {
 		T defaultItem = defaultItem();
 		if (!defaultItem.type().equals(AccountType.ASSETS)) throw new IllegalArgumentException("defaultItem is not Assets");
 		add(item.type().rl(), item, amount);
@@ -71,7 +77,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 */
-	protected void addLeft(T item, int amount) {
+	protected final void addLeft(T item, int amount) {
 		add(AccountType.RL.LEFT, item, amount);
 	}
 	/**
@@ -79,17 +85,17 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 */
-	protected void addRight(T item, int amount) {
+	protected final void addRight(T item, int amount) {
 		add(AccountType.RL.RIGHT, item, amount);
 	}
 
 	// 特定科目の金額を増加する
 	@Override
-	protected void increase(T item, int amount) {
+	protected final void increase(T item, int amount) {
 		Map<T, Integer> itemMap = accountsBook.get(item.type());
 		itemMap.put(item, itemMap.get(item).intValue() + amount);
 	}
-	protected void decrease(T item, int amount) {
+	protected final void decrease(T item, int amount) {
 		Map<T, Integer> itemMap = accountsBook.get(item.type());
 		itemMap.put(item, itemMap.get(item).intValue() - amount);
 	}
@@ -100,14 +106,9 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @return 集計結果
 	 */
 	@Override
-	public int get(AccountType type) {
-		Map<T, Integer> itemMap = accountsBook.get(type);
-		int result = 0;
-
-		for (Integer amount : itemMap.values()) {
-			result += amount.intValue();
-		}
-		return result;
+	public final int get(AccountType type) {
+		return accountsBook.get(type).values().stream()
+			.mapToInt(integer -> integer.intValue()).sum();
 	}
 	/**
 	 * 指定した勘定科目の金額を返します
@@ -115,7 +116,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @return 指定した勘定科目の金額
 	 */
 	@Override
-	public int get(T item) {
+	public final int get(T item) {
 		Map<T, Integer> itemMap = accountsBook.get(item.type());
 		return itemMap.get(item).intValue();
 	}
@@ -137,7 +138,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param acquisitionCost 取得原価
 	 * @param serviceLife 耐用年数
 	 */
-	protected void addFixedAsset(LocalDate dateOfAcquisition, int acquisitionCost, int serviceLife) {
+	protected final void addFixedAsset(LocalDate dateOfAcquisition, int acquisitionCost, int serviceLife) {
 		fixedAssets.add(new FixedAsset(dateOfAcquisition, acquisitionCost, serviceLife));
 	}
 	/**
@@ -147,22 +148,17 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	 * @param date 記入日
 	 * @return その日の償却額
 	 */
-	protected int recordFixedAssets(LocalDate date) {
-		int amount = 0;
-		for (FixedAsset asset : fixedAssets)
-			amount += asset.record(date);
-		return amount;
+	protected final int recordFixedAssets(LocalDate date) {
+		return fixedAssets.stream()
+			.collect(Collectors.summingInt(asset -> asset.record(date)));
 	}
 	/**
 	 * 保有している固定資産の現在価値の総額を計算します
 	 */
-	protected int fixedAssetsValue() {
-		int amount = 0;
-		for (FixedAsset asset : fixedAssets)
-			amount += asset.presentValue();
-		return amount;
+	protected final int fixedAssetsValue() {
+		return fixedAssets.stream()
+			.collect(Collectors.summingInt(FixedAsset::presentValue));
 	}
-
 
 	/**
 	 * 固定資産の減価償却の計算を行うクラス
@@ -206,7 +202,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		 */
 		private boolean isRecordedDate(LocalDate date) {
 			// 償却が終わっている
-			if (date.isAfter(lastRecordedDate)) return false;
+			if (date.isAfter(lastRecordedDate) || recordMap.containsKey(date)) return false;
 			// 対応する日がない
 			if (date.lengthOfMonth() < dateOfAcquisition.getDayOfMonth())
 				return date.getDayOfMonth() == date.lengthOfMonth();
@@ -220,7 +216,6 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		 */
 		private int record(LocalDate date) {
 			if (!isRecordedDate(date)) return 0;
-			if (recordMap.containsKey(date)) return 0;
 			if (undepreciatedBalance <= 0) return 0;
 			int amount = fixedAmountOfMonths;
 			amount = undepreciatedBalance < amount ? undepreciatedBalance : amount;
@@ -228,10 +223,14 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			recordMap.put(date, undepreciatedBalance); // 記録
 			return amount;
 		}
+		private LocalDate dateOfAcquisition() {
+			return dateOfAcquisition;
+		}
 		/**
 		 * 状態を表形式で表示します
+		 * @return 最終計上日
 		 */
-		private void print() {
+		private LocalDate print() {
 			System.out.printf("get:%s, all-amount:%d円, per-amount:%d, life:%d年%n", dateOfAcquisition, acquisitionCost, fixedAmountOfMonths, serviceLife);
 			economy.util.TableBuilder tb = new economy.util.TableBuilder("償却回", "日付", "金額");
 			int cnt = 1;
@@ -241,13 +240,16 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 					.add(2, recordMap.get(date));
 			tb.print();
 			System.out.printf("最終償却日の合致:%b%n", ((SortedMap<LocalDate, Integer>)recordMap).lastKey().equals(lastRecordedDate));
+
+			return ((SortedMap<LocalDate, Integer>)recordMap).lastKey();
 		}
 	}
 
 	/**
 	 * テスト用メソッド
 	 */
-	public void test_fixedAssets() {
+	public void test_fixedAssets(int count) {
+		// 固定資産の追加と減価償却
 		LocalDate date = LocalDate.now();
 		int depreciatedBalance = 0;
 		for (int i = 0; i < 100; i++) {
@@ -255,14 +257,28 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			depreciatedBalance += recordFixedAssets(date);
 			date = date.plusDays(1);
 		}
-		for (int i=0; i<3000; i++) {
-			depreciatedBalance += recordFixedAssets(date);
-			date = date.plusDays(1);
-		}
 
-		for (FixedAsset asset : fixedAssets) {
-			asset.print();
-		}
+		depreciatedBalance += Stream.iterate(date, d -> d.plusDays(1)).limit(3000)
+			.mapToInt(this::recordFixedAssets)
+			.sum();
+
+		Timer timer = new Timer();
+		// 結果の表示
+		timer.start("print()");
+		fixedAssets.stream().sorted((a1, a2) -> a1.dateOfAcquisition().compareTo(a2.dateOfAcquisition)) // 取得日でソート
+			.map(FixedAsset::print) // 最終計上日でマップされる
+			.collect(Collectors.maxBy((d1, d2) -> d1.compareTo(d2))).get();
+		timer.end("print()");
 		System.out.printf("現在日: %s, 減価償却累計額:%d%n", date, depreciatedBalance);
+
+		timer.start("addFixedAsset()");
+		addFixedAsset(date, 100000, 8);
+		timer.end("addFixedAsset()");
+		timer.start("plusDays");
+		date.plusDays(1);
+		timer.end("plusDays");
+		timer.start("record");
+		recordFixedAssets(date);
+		timer.end("record");
 	}
 }

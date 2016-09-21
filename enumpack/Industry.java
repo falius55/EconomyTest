@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.EnumSet;
+import java.util.function.Predicate;
 
 import economy.enumpack.Product;
 
@@ -12,12 +13,13 @@ import economy.enumpack.Product;
  */
 public enum Industry {
 	// このコンストラクタ実行時点でProductが初期化されているとは限らない
-	LIBLIO("書店") { public Set<Product> products() { return EnumSet.of(Product.NOVEL); } },
-	REALTOR("不動産屋") { public Set<Product> products() { return EnumSet.of(Product.LAND, Product.BUILDINGS); } },
-	FARMER("農家") { public Set<Product> products() { return EnumSet.of(Product.RICE); } },
-	SUPER_MARKET("スーパー") { public Set<Product> products() { return EnumSet.of(Product.NOVEL, Product.RICE_BALL); } };
+	LIBLIO("書店", Type.RETAIL) { public Set<Product> products() { return EnumSet.of(Product.NOVEL); } },
+	REALTOR("不動産屋", Type.BIGMOUTHED_RETAIL) { public Set<Product> products() { return EnumSet.of(Product.LAND, Product.BUILDINGS); } },
+	FARMER("農家", Type.FIRST) { public Set<Product> products() { return EnumSet.of(Product.RICE); } },
+	SUPER_MARKET("スーパー", Type.RETAIL) { public Set<Product> products() { return EnumSet.of(Product.NOVEL, Product.RICE_BALL); } };
 
 	private final String name; // 日本語名
+	private final Type type;
 
 	private static final Map<String, Industry> stringToEnum = new HashMap<String, Industry>(); // 日本語名から業種enumへのマップ
 	static {
@@ -28,11 +30,12 @@ public enum Industry {
 	/**
 	 * @param name 日本語名
 	 */
-	Industry(String name) {
+	Industry(String name, Type type) {
 		this.name = name;
+		this.type = type;
 	}
 	/**
-	 * 日本語名から対象のenumインスタンスを取得する
+	 * 日本語名から対象のenumインスタンスを取得します
 	 * @param name 日本語名
 	 * @return 対象のenum
 	 */
@@ -43,18 +46,52 @@ public enum Industry {
 	 * @return 日本語名
 	 */
 	@Override public String toString() { return name; }
+	public Type type() {
+		return type;
+	}
 	/**
-	 * 取扱商品の集合を返す
+	 * 取扱商品の集合を返します
 	 */
 	abstract public Set<Product> products();
 	/**
-	 * 商品取り扱いの有無
+	 * 商品取り扱いの有無を返します
 	 */
 	public boolean hasProduct(Product product) {
 		return products().contains(product);
 	}
+	public PrivateBusiness createInstance() {
+		return type().createInstance(this, products());
+	}
 	public void print() {
 		System.out.printf("%s%n", this);
 		System.out.printf("取扱商品:%s%n", products());
+	}
+
+	/**
+	 * filterによってtrueと判定された要素の集合を返します
+	 * @param filter 要素の判定に使用する関数型インタフェース
+	 * @return 判定がtrueである要素の集合
+	 */
+	static public Set<Industry> selectSet(Predicate<Industry> filter) {
+		EnumSet<Industry> ret = EnumSet.noneOf(Industry.class);
+		for (Industry elem : values())
+			if (filter.test(elem)) ret.add(elem);
+		return ret;
+	}
+
+	public enum Type {
+		RETAIL("小売") {
+			@Override public PrivateBusiness createInstance(Industry industry, Set<Product> products) {
+				return new Retail();
+			}
+		}, MAKER("メーカー"), FIRST("第一次産業"), DISTRIBUTOR("流通業"), BIGMOUTHED_RETAIL("大口小売");
+
+		Type(String name) {
+			this.name = name;
+		}
+
+		public PrivateBusiness createInstance(Industry industry, Set<Product> products) {
+			return new PrivateBusiness(industry, products);
+		}
 	}
 }

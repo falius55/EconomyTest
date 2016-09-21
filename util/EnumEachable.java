@@ -7,6 +7,9 @@ import java.util.function.Predicate;
 import economy.util.ObjIntToIntFunction;
 
 public interface EnumEachable<T extends Enum<T>> {
+	/**
+	 * 型を明示的に指定することで、eachInt()の結果に使う型を選択した形で同様のことができます
+	 */
 	default <R> R each(Class<T> clazz, BiFunction<T,R,R> func) {
 		R ret = null;
 		for (T elem : clazz.getEnumConstants()) {

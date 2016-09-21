@@ -4,12 +4,19 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Stream;
+import java.util.function.Consumer;
 
 /**
  * データを格納し、表を作成するクラス
  * {@code
+ *  // コンストラクタに列名を渡してインスタンスを作成
  * TableBuilder tb = new TableBuilder("名前","性別","年齢");
+ *  // insert(String)で挿入行を指定して内部クラスのインスタンスを取得
+ *  // さらに続けてadd(String, Object)で挿入行とデータを渡す
  * tb.insert("Anna")
  * 	.add("性別", "女")
  * 	.add("年齢", 16);
@@ -18,16 +25,34 @@ import java.util.Arrays;
  * 	.add("年齢", 21);
  * tb.insert("Kai")
  * 	.add(1, "男")
- * 	.add(2, 12);
+ * 	.add(2, 12)
+ * 	.add(0, "カイ"); // 最初の行の値を変更すると、識別名とは別に変更される
+ *
+ * Object alex = new Object() {
+ * 	String name = "Alex";
+ * 	@Override
+ * 	public String toString() {
+ * 		return name;
+ * 	}
+ * };
+ * tb.insert("Anna").add(3,'A');
+ *  // オブジェクトを行の識別名として使用することもできる。特に一行目の名前を指定していなければtoString()の戻り値が行名として使われる
+ * tb.insert(alex).add("イニシャル", "A");
+ * tb.insert("Kai").add(3, 'K');
  * tb.print();
  * }
+ * 上の例で作成される表
+ * +-----+-----+-----+-----------+
+ * |名前 |性別 |年齢 |イニシャル |
+ * |Anna |女   |16   |A          |
+ * |Alex |男   |21   |A          |
+ * |カイ |男   |12   |K          |
+ * +-----+-----+-----+-----------+
  */
 public class TableBuilder {
 	// 行の名前(１列目のデータ)からの、列名からデータへのマップ、へのマップ
 	private Map<String, Map<String, Object>> dataMap;
-	// 順序を保証するためのリスト
 	private List<String> columnTitleList; // 列名のリスト
-	private List<String> rowTitleList; // 行タイトルのリスト
 
 
 	private String firstColumn;
@@ -37,16 +62,18 @@ public class TableBuilder {
 	 * @param column 二列目以降各列の名前
 	 */
 	public TableBuilder(String firstColumn, String... column) {
-		dataMap = new HashMap<String, Map<String, Object>>();
+		dataMap = new LinkedHashMap<String, Map<String, Object>>();
 		this.firstColumn = firstColumn;
 		columnTitleList = new ArrayList<String>();
 		columnTitleList.add(firstColumn);
 		columnTitleList.addAll(Arrays.asList(column));
-		rowTitleList = new ArrayList<String>();
 	}
 
 	/**
-	 * 指定行へのデータ追加を開始する
+	 * 指定行へのデータ追加を開始します
+	 * 識別名を引数で指定し、以降は同じ識別名なら同一行として扱います
+	 * 初めて指定される識別名は自動的に一行目のデータとして扱われますが、add()の第一引数に一列目の名称または0を指定することで変更することも可能です
+	 * 一列目のデータを変更したとしても、識別名として使用されるオブジェクトが変わることはありません
 	 * @param rowTitleObj 追加行の識別名を文字列表現として持つオブジェクト。初めて挿入する識別名なら自動的に一列目のデータとして挿入される
 	 * @return 指定された行へのデータ挿入を請け負う内部クラスのインスタンス
 	 */
@@ -55,7 +82,6 @@ public class TableBuilder {
 		if (dataMap.containsKey(rowTitle)) {
 			return new InsertAgency(columnTitleList, dataMap.get(rowTitle));
 		} else {
-			rowTitleList.add(rowTitle);
 			Map<String, Object> newData = new HashMap<String, Object>();
 			newData.put(firstColumn, rowTitle);
 			dataMap.put(rowTitle, newData);
@@ -63,8 +89,8 @@ public class TableBuilder {
 		}
 	}
 	/**
-	 * 指定行の識別名で指定された列にデータを追加する
-	 * 一列目のデータを変更しても、insert(String)に使用するキーは変わらない
+	 * 指定行の識別名で指定された列にデータを追加します
+	 * 一列目のデータを変更しても、insert(String)に使用する識別名は変わりません
 	 * @param rowTitleObj 追加行の識別名を文字列表現として持つオブジェクト。初めて挿入する識別名なら自動的に一列目のデータとして挿入される
 	 * @param column 追加する列の名前
 	 * @param data 追加するデータ
@@ -74,8 +100,8 @@ public class TableBuilder {
 		return insert(rowTitleObj).add(column, data);
 	}
 	/**
-	 * 指定行のインデックスで指定された列にデータを追加する
-	 * 一列目のデータを変更しても、insert(String)に使用するキーは変わらない
+	 * 指定行のインデックスで指定された列にデータを追加します
+	 * 一列目のデータを変更しても、insert(String)に使用するキーは変わりません
 	 * @param rowTitleObj 追加行の識別名を文字列表現として持つオブジェクト。初めて挿入する識別名なら自動的に一列目のデータとして挿入される
 	 * @param columnIndex 追加する列のインデックス(０なら一列目)
 	 * @param data 追加するデータ
@@ -102,7 +128,7 @@ public class TableBuilder {
 		}
 
 		/**
-		 * 指定された列に、データを挿入する。nullが渡された場合は、その列のデータは空であるものとする
+		 * 指定された列に、データを挿入します。nullが渡された場合は、その列のデータは空であるものとします
 		 * @param column 挿入する列の名前
 		 * @param data 挿入するデータ。nullが渡されるとデータを空にする
 		 * @return このオブジェクトの参照
@@ -114,7 +140,7 @@ public class TableBuilder {
 			return this;
 		}
 		/**
-		 * 指定されたインデックスの列に、データを挿入する
+		 * 指定されたインデックスの列に、データを挿入します
 		 * @param columnIndex 挿入する列のインデックス
 		 * @param data 挿入するデータ。nullが渡されるとデータを空にする
 		 * @return このオブジェクトの参照
@@ -126,7 +152,7 @@ public class TableBuilder {
 	}
 
 	/**
-	 * テーブルを作成する
+	 * テーブルを作成します
 	 * @return 作成されたテーブルを一行ずつ格納したリスト
 	 */
 	public List<String> build() {
@@ -146,21 +172,27 @@ public class TableBuilder {
 		table.add(header.toString());
 
 		// 各行の文字列を作成する
-		for (String rowTitle : rowTitleList) {
-			Map<String, Object> row = dataMap.get(rowTitle);
-			StringBuilder sbRow = new StringBuilder("|");
-			for (String column : columnTitleList) {
-				String data = row.get(column) == null ? "" : row.get(column).toString(); // データに明示的にnullを渡された時も想定するのでrow.containsKey(column)では判断できず、直接取り出して確認するしかない
-				sbRow.append(padding(data, lenMap.get(column))).append('|');
-			}
-			table.add(sbRow.toString());
-		}
+		for(Map<String, Object> row : dataMap.values())
+			table.add(toRowString(lenMap, row));
 		table.add(separator);
 		return table;
 	}
+	/**
+	 * 表のデータ部の一行を表す文字列を作成します
+	 * @param lenMap 各列の最大の長さを格納したマップ
+	 * @param row 行の各列のデータを格納したマップ
+	 */
+	private String toRowString(Map<String, Integer> lenMap, Map<String, Object> row) {
+		StringBuilder sbRow = new StringBuilder("|");
+		for (String column : columnTitleList) {
+			String data = Objects.toString(row.get(column), "");
+			sbRow.append(padding(data, lenMap.get(column))).append('|');
+		}
+		return sbRow.toString();
+	}
 
 	/**
-	 * 標準出力に表を出力する
+	 * 標準出力に表を出力します
 	 * @return このオブジェクトの参照
 	 */
 	public TableBuilder print() {
@@ -170,26 +202,36 @@ public class TableBuilder {
 	}
 
 	/**
-	 * 各列から、その列の最大の長さへのマップを作成する
+	 * 各列から、その列の最大の長さへのマップを作成します
+	 * @return 列名をkeyにして、valueにその列の最大の長さが格納されたマップ
 	 */
 	private Map<String, Integer> columnLenMap() {
 		Map<String, Integer> lenMap = new HashMap<String, Integer>();
-		// 列名の文字数で初期化
-		for (String column : columnTitleList)
-			lenMap.put(column, length(column));
-
-		// 各行のデータをイテレートし、それぞれ比較して大きい数値で更新していく
-		// 結果を入れているマップのキーで、各行の同じ列のデータを取り出す
-		for (Map<String, Object> row : dataMap.values())
-			row.forEach((String column, Object dataObj) -> {
-				String data = dataObj == null ? "" : dataObj.toString(); // 明示的にデータにnullを渡された時を想定
-				if (length(data) > lenMap.get(column).intValue())
-					lenMap.put(column, length(data));
-			});
+		for (String column : columnTitleList) {
+			Stream.Builder<Object> builder = Stream.<Object>builder();
+			columnEach(column, builder, true);
+			int maxLen = builder.build().mapToInt(data -> length(Objects.toString(data, ""))).max().orElse(0);
+			lenMap.put(column, maxLen);
+		}
 		return lenMap;
 	}
 	/**
-	 * 文字列の長さを取得する(半角文字の何文字分か)
+	 * 指定した列のデータをイテレートして処理を適用します
+	 * @param column イテレートする列名
+	 * @param func 適用する処理を定義した関数型インターフェース
+	 * @param includeTitle 処理対象に列名自体まで含めるかどうかを指定する(trueなら含める)
+	 */
+	private void columnEach(String column, Consumer<Object> func, boolean includeTitle) {
+		if (includeTitle) func.accept(column);
+		dataMap.forEach((rowTitle, rowData) -> {
+			func.accept(rowData.get(column));
+		});
+	}
+	private void columnEach(String column, Consumer<Object> func) {
+		columnEach(column, func, false);
+	}
+	/**
+	 * 文字列の長さを取得します(半角文字の何文字分か)
 	 */
 	private int length(String str) {
 		int length = 0;
@@ -201,7 +243,7 @@ public class TableBuilder {
 		return length;
 	}
 	/**
-	 * 空白でパディングする
+	 * 空白でパディングします
 	 */
 	private String padding(String str, int length) {
 		return padding(str, length, ' ');
@@ -215,14 +257,19 @@ public class TableBuilder {
 	private String padding(String str, int length, char padChar) {
 		StringBuilder ret = new StringBuilder(str);
 		int padCount = length - length(str) + 1;
-		for (int i = 0; i < padCount; i++) {
-			ret.append(padChar);
-		}
+		for (int i = 0; i < padCount; i++) ret.append(padChar);
 		return ret.toString();
 	}
 
 	public static void main(String[] arg) {
-		TableBuilder tb = new TableBuilder("名前","性別","年齢");
+		Object alex = new Object() {
+			String name = "Alex";
+			@Override
+			public String toString() {
+				return name;
+			}
+		};
+		TableBuilder tb = new TableBuilder("名前","性別","年齢","イニシャル");
 		tb.insert("Anna")
 			.add("性別", "女")
 			.add("年齢", 16);
@@ -231,7 +278,12 @@ public class TableBuilder {
 			.add("年齢", 21);
 		tb.insert("Kai")
 			.add(1, "男")
-			.add(2, 12);
+			.add(2, 12)
+			.add(0, "カイ");
+
+		tb.insert("Anna").add(3,'A');
+		tb.insert(alex).add("イニシャル", "A");
+		tb.insert("Kai").add(3, 'K');
 		tb.print();
 	}
 }

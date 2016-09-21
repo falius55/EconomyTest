@@ -10,15 +10,16 @@ import economy.market.MarketInfomation;
 
 /**
  * Subjectインターフェースの骨格実装クラス
+ * 会計操作
  */
 abstract public class AbstractSubject implements Subject {
-	private Account account;
+	final Account account;
 	private Bank mainBank;
 
 	private List<DebtMediator> debtList; // 借金のリスト
 	private List<DebtMediator> claimList; // 貸金のリスト
 
-	public AbstractSubject(Account account) {
+	AbstractSubject(Account account) {
 		this.account = account;
 		debtList = new ArrayList<DebtMediator>();
 		claimList = new ArrayList<DebtMediator>();

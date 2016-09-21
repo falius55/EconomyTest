@@ -40,10 +40,11 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	 */
 
 	/**
-	 * 売り上げる。売上金は当座預金への振込で受け取り
+	 * 売り上げる
+	 * @param receiveItem 受取科目
 	 */
-	public PrivateBusinessAccount saleToAccount(int mount) {
-		addLeft(PrivateBusinessAccountTitle.CHECKING_ACCOUNTS, mount);
+	public PrivateBusinessAccount saleBy(PrivateBusinessAccountTitle receiveItem, int mount) {
+		addLeft(receiveItem,mount);
 		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}
@@ -173,7 +174,7 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 		PrivateBusinessAccount account = PrivateBusinessAccount.newInstance();
 		account.add(PrivateBusinessAccountTitle.SALES, 2000);
 		System.out.println(account);
-		account.test_fixedAssets();
+		account.test_fixedAssets(1000);
 		Product.printAll();
 	}
 }

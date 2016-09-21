@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.EnumMap;
 
 import economy.enumpack.Industry;
-import economy.util.EnumEachable;
 import economy.util.TableBuilder;
 
 /**
@@ -25,19 +24,19 @@ public enum Product {
 			return ret;
 		}
 	},
-	WOOD("木材", 60, Type.CONSUMER, 1000 /* g */){
+	WOOD("木材", 600, Type.CONSUMER, 1000 /* g */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			return ret;
 		}
 	},
-	RICE("米", 30, Type.CONSUMER, 1000 /* g */){
+	RICE("米", 800, Type.CONSUMER, 1000 /* g */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			return ret;
 		}
 	},
-	PAPER("紙", 100, Type.CONSUMER, 500 /* 枚 */){
+	PAPER("紙", 300, Type.CONSUMER, 500 /* 枚 */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			ret.put(WOOD, 5 /* g */);
@@ -57,6 +56,9 @@ public enum Product {
 			ret.put(PAPER, 500 /* 枚 */);
 			return ret;
 		}
+		@Override public Factory buildFactory() {
+			return new Factory(Period.ofDays(1), 10);
+		}
 	},
 	RICE_BALL("おにぎり",120,Type.CONSUMER, 1 /* 個 */){
 		protected Map<Product, Integer> createMaterialMap() {
@@ -64,15 +66,18 @@ public enum Product {
 			ret.put(RICE, 200 /* g */);
 			return ret;
 		}
+		@Override public Factory buildFactory() {
+			return new Factory(Period.ofDays(1), 10);
+		}
 	};
 
 	private final String name; // 日本語名
-	private final int price; // 値段
+	private final int price; // 値段(ロットあたり)
 	private final Type type; // 資産としての種類
 	private final int serviceLife; // 耐用年数
 	private final int numOfLot; // 購入単位あたり数量
 	private static final Map<String, Product> stringToEnum = new HashMap<String, Product>(); // 日本語名から商品enumへのマップ
-	private static final Map<Product, Map<Product, Integer>> materials = new EnumMap<Product, Map<Product, Integer>>(Product.class);
+	private static final Map<Product, Map<Product, Integer>> materials = new EnumMap<Product, Map<Product, Integer>>(Product.class); // 原材料から必要数量へのマップ
 	static {
 		for (Product product : values())
 			stringToEnum.put(product.toString(), product);
@@ -92,12 +97,13 @@ public enum Product {
 		if (type == Type.FIXED_ASSET) throw new IllegalArgumentException("arguments has no serviceLife");
 	}
 	/**
-	 * 耐用年数が存在する場合に利用
+	 * 固定資産に利用するコンストラクタ
 	 * @param name 日本語名
 	 * @param price 値段(１単位あたり)
 	 * @param type 資産としての種類(消費財、固定資産など)
 	 * @param servicelife 耐用年数
 	 * @param numOfLot １単位あたり数量
+	 * @throws IllegalArgumentException typeが固定資産ではない場合
 	 */
 	Product(String name, int price, Type type, int serviceLife, int numOfLot) {
 		this.name = name;
@@ -110,7 +116,7 @@ public enum Product {
 	}
 
 	/**
-	 * 日本語名から対象のenumインスタンスを取得する
+	 * 日本語名から対象のenumインスタンスを取得します
 	 * @param name 日本語名
 	 * @return 対象のenum
 	 */
@@ -131,10 +137,10 @@ public enum Product {
 		return serviceLife;
 	}
 	/**
-	 * この商品を取り扱っている業種の集合を返す
+	 * この商品を取り扱っている業種の集合を返します
 	 */
 	public Set<Industry> industries() {
-		return EnumEachable.selectSet(Industry.class, industry -> industry.products().contains(this));
+		return Industry.selectSet(industry -> industry.hasProduct(this));
 	}
 	/**
 	 * 原材料の集合を返します
@@ -153,6 +159,9 @@ public enum Product {
 	}
 
 	abstract protected Map<Product, Integer> createMaterialMap();
+	public Factory buildFactory() {
+		throw new UnsupportedOperationException();
+	}
 
 	public Type type() {
 		return type;
