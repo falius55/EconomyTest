@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.EnumMap;
+import java.time.Period;
 
 import economy.enumpack.Industry;
 import economy.util.TableBuilder;
@@ -17,57 +18,51 @@ public enum Product {
 	// コンストラクタ内でメンバー変数に保存しようとするとExceptionInInitializerErrorが起こる(Product.classが不可？)
 	// また、その要素より下で宣言されている要素を引数内で使用していると「前方参照が不正です」というコンパイルエラー
 	// abstractメソッドで取り出すことにして、オーバーライドしたメソッドに値を直接記述することで回避。要素追加の際もコンストラクタ引数に渡す場合とあまり手間が変わらない
-	LAND("土地",10000000 /* 円 */, Type.LAND, 100 /* 坪 */) {
+	LAND("土地",10000000 /* 円 */, Type.LAND, 100 /* 坪 */, Period.ZERO, 100 /* 坪 */) {
 		// 原材料からその利用数量へのマップを作成する
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			return ret;
 		}
 	},
-	WOOD("木材", 600, Type.CONSUMER, 1000 /* g */){
+	WOOD("木材", 600, Type.CONSUMER, 1000 /* g */, Period.ofYears(1), 100000 /* g */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			return ret;
 		}
 	},
-	RICE("米", 800, Type.CONSUMER, 1000 /* g */){
+	RICE("米", 800, Type.CONSUMER, 1000 /* g */, Period.ofYears(1), 1000000 /* g */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			return ret;
 		}
 	},
-	PAPER("紙", 300, Type.CONSUMER, 500 /* 枚 */){
+	PAPER("紙", 300, Type.CONSUMER, 500 /* 枚 */, Period.ofDays(1), 2000 /* 枚 */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			ret.put(WOOD, 5 /* g */);
 			return ret;
 		}
 	},
-	BUILDINGS("建物", 5000000, Type.FIXED_ASSET, 45 /* 年 */, 1 /* 棟 */){
+	BUILDINGS("建物", 5000000, Type.FIXED_ASSET, 45 /* 年 */, 1 /* 棟 */, Period.ofYears(1), 1 /* 棟 */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			ret.put(WOOD, 100000 /* g */);
 			return ret;
 		}
 	},
-	NOVEL("小説",480,Type.CURRENT_ASSET, 1 /* 冊 */){
+	NOVEL("小説",480,Type.CURRENT_ASSET, 1 /* 冊 */, Period.ofDays(1), 10 /* 冊 */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			ret.put(PAPER, 500 /* 枚 */);
 			return ret;
 		}
-		@Override public Factory buildFactory() {
-			return new Factory(Period.ofDays(1), 10);
-		}
 	},
-	RICE_BALL("おにぎり",120,Type.CONSUMER, 1 /* 個 */){
+	RICE_BALL("おにぎり",120,Type.CONSUMER, 1 /* 個 */, Period.ofDays(1), 100 /* 個 */){
 		protected Map<Product, Integer> createMaterialMap() {
 			Map<Product, Integer> ret = new EnumMap<Product, Integer>(Product.class);
 			ret.put(RICE, 200 /* g */);
 			return ret;
-		}
-		@Override public Factory buildFactory() {
-			return new Factory(Period.ofDays(1), 10);
 		}
 	};
 
@@ -76,6 +71,8 @@ public enum Product {
 	private final Type type; // 資産としての種類
 	private final int serviceLife; // 耐用年数
 	private final int numOfLot; // 購入単位あたり数量
+	private final Period manufacturePeriod; // 製造期間
+	private final int productionVolume; // 一度の製造数
 	private static final Map<String, Product> stringToEnum = new HashMap<String, Product>(); // 日本語名から商品enumへのマップ
 	private static final Map<Product, Map<Product, Integer>> materials = new EnumMap<Product, Map<Product, Integer>>(Product.class); // 原材料から必要数量へのマップ
 	static {
@@ -91,9 +88,11 @@ public enum Product {
 	 * @param price 値段(１単位あたり)
 	 * @param type 資産としての種類(消費財、固定資産など)
 	 * @param numOfLot １単位あたり数量
+	 * @param 製造期間
+	 * @param manufacturePeriod 一度の製造数
 	 */
-	Product(String name, int price,Type type, int numOfLot) {
-		this(name, price, type, 0, numOfLot);
+	Product(String name, int price,Type type, int numOfLot, Period manufacturePeriod, int productionVolume) {
+		this(name, price, type, 0, numOfLot, manufacturePeriod, productionVolume);
 		if (type == Type.FIXED_ASSET) throw new IllegalArgumentException("arguments has no serviceLife");
 	}
 	/**
@@ -103,14 +102,18 @@ public enum Product {
 	 * @param type 資産としての種類(消費財、固定資産など)
 	 * @param servicelife 耐用年数
 	 * @param numOfLot １単位あたり数量
+	 * @param 製造期間
+	 * @param manufacturePeriod 一度の製造数
 	 * @throws IllegalArgumentException typeが固定資産ではない場合
 	 */
-	Product(String name, int price, Type type, int serviceLife, int numOfLot) {
+	Product(String name, int price, Type type, int serviceLife, int numOfLot, Period manufacturePeriod, int productionVolume) {
 		this.name = name;
 		this.price = price;
 		this.type = type;
 		this.serviceLife = serviceLife;
 		this.numOfLot = numOfLot;
+		this.manufacturePeriod = manufacturePeriod;
+		this.productionVolume = productionVolume;
 
 		if (type == Type.FIXED_ASSET && serviceLife == 0) throw new IllegalArgumentException();
 	}
@@ -136,6 +139,12 @@ public enum Product {
 	public int serviceLife() {
 		return serviceLife;
 	}
+	public Period manufacturePeriod() {
+		return manufacturePeriod;
+	}
+	public int productionVolume() {
+		return productionVolume;
+	}
 	/**
 	 * この商品を取り扱っている業種の集合を返します
 	 */
@@ -159,9 +168,6 @@ public enum Product {
 	}
 
 	abstract protected Map<Product, Integer> createMaterialMap();
-	public Factory buildFactory() {
-		throw new UnsupportedOperationException();
-	}
 
 	public Type type() {
 		return type;

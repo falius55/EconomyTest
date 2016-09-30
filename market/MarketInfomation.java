@@ -1,5 +1,7 @@
 package economy.market;
 
+import java.time.LocalDate;
+
 /**
  * 市場の情報を保持するためのシングルトンクラス
  */
@@ -16,8 +18,9 @@ public class MarketInfomation {
 		this.date = date;
 	}
 
-	public nextDay() {
+	public MarketInfomation nextDay() {
 		this.date = date.plusDays(1);
+		return this;
 	}
 
 	public LocalDate nowDate() {

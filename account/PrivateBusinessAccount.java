@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import economy.account.AbstractAccount;
 import economy.enumpack.Product;
 import economy.enumpack.Industry;
+import economy.enumpack.AccountTitle;
 import economy.enumpack.PrivateBusinessAccountTitle;
 
 public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBusinessAccountTitle> {
@@ -21,11 +22,6 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 		return new PrivateBusinessAccount();
 	}
 
-	@Override
-	public PrivateBusinessAccount merge(Account<PrivateBusinessAccountTitle> account) {
-		if (!(account instanceof PrivateBusinessAccount)) throw new IllegalArgumentException();
-		return (PrivateBusinessAccount)super.merge(account);
-	}
 	@Override
 	public PrivateBusinessAccountTitle defaultItem() {
 		return PrivateBusinessAccountTitle.defaultItem();
@@ -40,11 +36,13 @@ public class PrivateBusinessAccount extends AbstractDoubleEntryAccount<PrivateBu
 	 */
 
 	/**
-	 * 売り上げる
+	 * 売り上げます
+	 * receiveItemにPrivateBusinessAccountTitle以外を渡すと内部でキャストに失敗して例外が発生しますので注意してください
 	 * @param receiveItem 受取科目
 	 */
-	public PrivateBusinessAccount saleBy(PrivateBusinessAccountTitle receiveItem, int mount) {
-		addLeft(receiveItem,mount);
+	@Override
+	public PrivateBusinessAccount saleBy(AccountTitle receiveItem, int mount) {
+		addLeft((PrivateBusinessAccountTitle)receiveItem, mount);
 		addRight(PrivateBusinessAccountTitle.SALES, mount);
 		return this;
 	}

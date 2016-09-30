@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import economy.stockmanager.StockManager;
 import economy.enumpack.Product;
 import economy.enumpack.Industry;
+import economy.player.PrivateBusiness;
 
 /**
  * 倉庫
@@ -14,11 +15,12 @@ import economy.enumpack.Industry;
 public class Repository implements StockManager {
 	private final Product product; // 製造する製品
 	private int stock = 0; // 在庫
-	private int puchaseExpense = 0; // 未計上の仕入費用総額
+	private int purchaseExpense = 0; // 未計上の仕入費用総額
 	private int totalCost = 0; // 原価総額
 	private Industry.Type productSource; // 仕入先の業態(小売なら流通業者、流通業者ならメーカー)
 
-	public Repository(Industry.Type productSource) {
+	public Repository(Product product, Industry.Type productSource) {
+		this.product = product;
 		this.productSource = productSource;
 	}
 
@@ -31,7 +33,7 @@ public class Repository implements StockManager {
 		int shortfall = require - stock;
 		if (shortfall <= 0) return true;
 		return PrivateBusiness.stream()
-			.anyMatch(store -> store.isCategory(productSource) && store.canSale(product, lot));
+			.anyMatch(store -> store.is(productSource) && store.canSale(product, lot));
 	}
 	/**
 	 * 出荷します
@@ -42,7 +44,7 @@ public class Repository implements StockManager {
 		// 足りなくなれば即座に仕入
 		int require = lot * product.numOfLot();
 		if (require > stock)
-			puchase(product, (int)Math.ceil((double)(require - stock) / product.numOfLot()));
+			purchase(product, (int)Math.ceil((double)(require - stock) / product.numOfLot()));
 		if (!canShipOut(lot)) return OptionalInt.empty();
 		int cost = (totalCost / stock) * require;
 		totalCost -= cost;
@@ -55,8 +57,8 @@ public class Repository implements StockManager {
 	 */
 	@Override
 	public int computePurchaseExpense(LocalDate date) {
-		int ret = puchaseExpense;
-		puchaseExpense = 0;
+		int ret = purchaseExpense;
+		purchaseExpense = 0;
 		return ret;
 	}
 
@@ -67,9 +69,9 @@ public class Repository implements StockManager {
 	private OptionalInt purchase(Product product, int lot) {
 		// 仕入先の店を探す
 		Optional<PrivateBusiness> store =
-			PrivateBusiness.stream().filter(e -> e.isCategory(productSource) && e.canSale(product, lot))
-			.findAny().get();
-		if (!store.isPresent()) return Optional.empty();
+			PrivateBusiness.stream().filter(e -> e.is(productSource) && e.canSale(product, lot))
+			.findAny();
+		if (!store.isPresent()) return OptionalInt.empty();
 		// 購入する
 		OptionalInt cost = store.get().sale(product, lot);
 		if (!cost.isPresent()) return cost;

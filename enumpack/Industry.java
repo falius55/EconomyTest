@@ -4,9 +4,17 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.EnumSet;
+import java.util.Arrays;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.time.Period;
 
 import economy.enumpack.Product;
+import economy.player.PrivateBusiness;
+import economy.player.Retail;
+import economy.stockmanager.StockManager;
+import economy.stockmanager.Repository;
+import economy.stockmanager.Factory;
 
 /**
  * 業種
@@ -73,18 +81,32 @@ public enum Industry {
 	 * @return 判定がtrueである要素の集合
 	 */
 	static public Set<Industry> selectSet(Predicate<Industry> filter) {
-		EnumSet<Industry> ret = EnumSet.noneOf(Industry.class);
-		for (Industry elem : values())
-			if (filter.test(elem)) ret.add(elem);
-		return ret;
+		return Arrays.stream(values())
+			.filter(filter)
+			.collect(Collectors.toCollection(() -> EnumSet.noneOf(Industry.class)));
 	}
 
 	public enum Type {
 		RETAIL("小売") {
 			@Override public PrivateBusiness createInstance(Industry industry, Set<Product> products) {
-				return new Retail();
+				return new Retail(industry, products);
 			}
-		}, MAKER("メーカー"), FIRST("第一次産業"), DISTRIBUTOR("流通業"), BIGMOUTHED_RETAIL("大口小売");
+			@Override public StockManager newManager(Product product) {
+				return new Repository(product, DISTRIBUTOR);
+			}
+		}, MAKER("メーカー") {
+			@Override public StockManager newManager(Product product) {
+				return new Factory(product);
+			}
+		}, FIRST("第一次産業"),
+		DISTRIBUTOR("流通業") {
+			@Override public StockManager newManager(Product product) {
+				return new Repository(product, MAKER);
+			}
+		},
+		BIGMOUTHED_RETAIL("大口小売");
+
+		private final String name;
 
 		Type(String name) {
 			this.name = name;
@@ -92,6 +114,9 @@ public enum Industry {
 
 		public PrivateBusiness createInstance(Industry industry, Set<Product> products) {
 			return new PrivateBusiness(industry, products);
+		}
+		public StockManager newManager(Product product) {
+			return new Repository(product, MAKER);
 		}
 	}
 }

@@ -14,41 +14,45 @@ public interface Account<T extends Enum<T> & AccountTitle> {
 	Account<T> merge(Account<T> another);
 
 	/**
-	 * 扱っている科目一覧を返す
+	 * 扱っている科目一覧を返します
 	 */
 	T[] items();
 
 	/**
-	 * 指定がないときに増減させる標準資産科目を返す。通常は現金を想定するが、サブタイプごとに定義する
+	 * 指定がないときに増減させる標準資産科目を返します。通常は現金を想定していますが、サブタイプごとに定義してください
 	 * @return 標準資産科目
 	 */
 	T defaultItem();
 
 	/**
-	 * お金を銀行に預けた時の処理を行う
+	 * お金を銀行に預けた時の処理を行います
 	 */
 	Account<T> saveMoney(int amount);
 
 	/**
-	 * お金をおろした時の処理を行う
+	 * お金をおろした時の処理を行います
 	 */
 	Account<T> downMoney(int amount);
 	/**
-	 * 借金処理を行う
+	 * 借金処理を行います
 	 */
 	Account<T> borrow(int amount);
 	/**
-	 * 返済処理を行う
+	 * 返済処理を行います
 	 */
 	Account<T> repay(int amount);
 	/**
-	 * 貸金処理を行う
+	 * 貸金処理を行います
 	 */
 	Account<T> lend(int amount);
 	/**
-	 * 返済を受けた時の処理を行う
+	 * 返済を受けた時の処理を行います
 	 */
 	Account<T> repaid(int amount);
+
+	default <E extends AccountTitle> Account<T> saleBy(E item, int amount) {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * 納税処理を行います
@@ -58,13 +62,13 @@ public interface Account<T extends Enum<T> & AccountTitle> {
 	Account<T> payTax(int amount);
 
 	/**
-	 * 指定した科目種別の総額を集計する
+	 * 指定した科目種別の総額を集計します
 	 * @param type 科目種別
 	 * @return 集計結果
 	 */
 	int get(AccountType type);
 	/**
-	 * 指定した勘定科目の金額を返す
+	 * 指定した勘定科目の金額を返します
 	 * @param item 勘定科目
 	 * @return 指定した勘定科目の金額
 	 */

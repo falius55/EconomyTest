@@ -49,7 +49,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	}
 
 	/**
-	 * 帳簿に記入する
+	 * 帳簿に記入します
 	 * @param rl 記入箇所。借方(LEFT)か貸し方(RIGHT)か
 	 * @param item 勘定科目
 	 * @param amount 金額
@@ -61,7 +61,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			decrease(item, amount);
 	}
 	/**
-	 * 標準資産科目(defaultItem()によって定義)を相手科目として、指定された科目を増加させる
+	 * 標準資産科目(defaultItem()によって定義)を相手科目として、指定された科目を増加させます
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 * @throws IllegalArgumentException サブタイプで定義した標準科目が資産科目でない場合
@@ -73,7 +73,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		add(item.type().rl().inverse(), defaultItem, amount);
 	}
 	/**
-	 * 借方に記入する
+	 * 借方に記入します
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 */
@@ -81,7 +81,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 		add(AccountType.RL.LEFT, item, amount);
 	}
 	/**
-	 * 貸方に記入する
+	 * 貸方に記入します
 	 * @param item 勘定科目
 	 * @param amount 金額
 	 */
@@ -101,7 +101,7 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 	}
 
 	/**
-	 * 指定した科目種別の総額を計算する
+	 * 指定した科目種別の総額を計算します
 	 * @param type 科目種別
 	 * @return 集計結果
 	 */
@@ -198,9 +198,10 @@ public abstract class AbstractDoubleEntryAccount<T extends Enum<T> & AccountTitl
 			return residualValue + undepreciatedBalance;
 		}
 		/**
-		 * その日が計上日であるか(毎月。営業日無視) TODO: 営業日を考慮する
+		 * その日が計上日であるかを返します(毎月。営業日無視)
 		 */
 		private boolean isRecordedDate(LocalDate date) {
+			// TODO: 営業日を考慮する
 			// 償却が終わっている
 			if (date.isAfter(lastRecordedDate) || recordMap.containsKey(date)) return false;
 			// 対応する日がない

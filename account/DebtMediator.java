@@ -22,7 +22,7 @@ public class DebtMediator {
 	 * 債務が受け入れられ、債権債務関係が発生する
 	 */
 	public DebtMediator accepted(Account creditorAccount, LocalDate date) {
-		if (creditorAccount != null) throw new IllegalStatementException("債権債務関係はすでに発生しています");
+		if (creditorAccount != null) throw new IllegalStateException("債権債務関係はすでに発生しています");
 		this.creditorAccount = creditorAccount;
 		this.accrualDate = date;
 		debtorAccount.borrow(amount());
