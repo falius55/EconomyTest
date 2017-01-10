@@ -43,7 +43,7 @@ class PrivateBank{
 			}
 		// 年次決算
 		if(cal.get(Calendar.MONTH)+1==12 && cal.get(Calendar.DATE)==31){
-				
+
 			}
 		}
 	// 口座開設
@@ -163,7 +163,7 @@ class PrivateBank{
 	// 必要資本額
 	public long getRequireCapital(){
 		return (long)(getMoney() * CentralBank.getCapitalRate());
-		
+
 		}
 	// 保有現預金
 	public long getMoney(){

@@ -106,6 +106,7 @@ public class Factory implements StockManager {
 	 * 必ずrestockAll()で原材料を補充し、canManufacture()で生産できるのかどうかを検査してから使用してください
 	 * @param material 必要とする原材料
 	 * @param require 必要数量
+	 * @throws IllegalStateException 生産できないのに呼び出された場合
 	 */
 	private void pullMaterial(Product material, int require) {
 		// 原材料を減少させる
